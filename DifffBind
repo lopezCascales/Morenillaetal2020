@@ -1,0 +1,52 @@
+chip <- dba(sampleSheet="samples.csv", dir=system.file("extra", package="DiffBind"))
+
+> chip <- dba(sampleSheet=samples, ,peakFormat='macs')
+ZIC2E6.1 gastrula Zic2   1 MACS
+ZIC2E6.2 gastrula Zic2   2 MACS
+ZIC2E8.1 NT Zic2   1 MACS
+ZIC2E8.2 NT Zic2   2 MACS
+BETACAT.1 EpiSC betacatenina   1 MACS
+BETACAT.2 EpiSC betacatenina   2 MACS
+
+> chip
+6 Samples, 8206 sites in matrix (10562 total):
+         ID   Tissue       Factor Replicate Intervals
+1  ZIC2E6.1 gastrula         Zic2         1      4206
+2  ZIC2E6.2 gastrula         Zic2         2      4815
+3  ZIC2E8.1       NT         Zic2         1      4206
+4  ZIC2E8.2       NT         Zic2         2      4815
+5 BETACAT.1    EpiSC betacatenina         1      8580
+6 BETACAT.2    EpiSC betacatenina         2      3611
+
+dba.plotHeatmap(chip)
+
+chip.counted <- dba.count(chip, summits=200, peaks=NULL)
+Computing summits...
+
+chip$class[10:11,]
+           ZIC2E6.1                           
+bamRead    "Zic2E6_rep1_AGG_sorted_rmdup.bam" 
+bamControl "inputE6_rep1_AGG_sorted_rmdup.bam"
+           ZIC2E6.2                           
+bamRead    "Zic2E6_rep2_AGG_sorted_rmdup.bam" 
+bamControl "inputE6_rep2_AGG_sorted_rmdup.bam"
+           ZIC2E8.1                          
+bamRead    "Zic2E8_rep1_AGG_sorted_rmdup.bam"
+bamControl "inputE8_rep1_AGG_sorted.bam"     
+           ZIC2E8.2                          
+bamRead    "Zic2E8_rep2_AGG_sorted_rmdup.bam"
+bamControl "inputE8_rep2_AGG_sorted.bam"     
+           BETACAT.1                                        
+bamRead    "03LD_ChIP-ES-betacatenin-lowdensity_r1.sort.bam"
+bamControl "03i_ChIP-ES-betacatenin-input_r1_sort.bam"      
+           BETACAT.2                                        
+bamRead    "03LD_ChIP-ES-betacatenin-lowdensity_r2.sort.bam"
+bamControl "03i_ChIP-ES-betacatenin-input_r1.sort.bam"      
+> file.exists(unique(chip$class[10,]))
+[1] TRUE TRUE TRUE TRUE TRUE TRUE
+> file.exists(unique(chip$class[11,]))
+[1] TRUE TRUE TRUE TRUE TRUE TRUE
+
+
+chip.counted <- dba.count(chip, bParallel=FALSE, summits=50)
+
