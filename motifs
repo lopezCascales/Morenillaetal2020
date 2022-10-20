@@ -1,1 +1,375 @@
 
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/mayte/Escritorio/betacatenina/merge/bin
+
+echo $PATH
+
+# /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin:/home/mayte/Escritorio/betacatenina/merge/bin
+
+
+# Example usage:
+awk '{if($0 !~ /^#/) print "chr"$0; else print $0}' input.tsv
+# This converts a tsv file with numeric genome coordinates to one with 
+# chr in front of the chromosome number. 
+
+# Note, this command does the opposite operation, if needed:
+awk '{gsub(/^chr/,""); print}' input.tsv
+
+GL456382.1.tags.tsv
+awk '{if($0 !~ /^#/) print "chr"$0; else print $0}' GL456382.1.tags.tsv
+
+
+There are two ways to notate the chromosome in the world:
+
+    chr1, chr2,… chrX, chrM
+    1, 2, …X,.M
+
+Don’t ask me why, I don’t know. But I do know is that they are very confusing and sometimes cause lots of troubles.
+
+Personally, I prefer the notation with “chr”. It is more clear and clean for me.
+
+Here I want to show you how to modify a BAM file with 2nd notation into 1st notation.
+
+samtools view -h 03i_ChIP-ES-betacatenin-input_r1_sort.bam | \
+sed -e '/^@SQ/s/SN\:/SN\:chr/' -e '/^[^@]/s/\t/\tchr/2' | \
+samtools view -bS - > temp.bam
+
+03LD_ChIP-ES-betacatenin-lowdensity_r1.bam
+03LD_ChIP-ES-betacatenin-lowdensity_r2.bam
+
+samtools view -h 03LD_ChIP-ES-betacatenin-lowdensity_r1.bam | \
+sed -e '/^@SQ/s/SN\:/SN\:chr/' -e '/^[^@]/s/\t/\tchr/2' | \
+samtools view -bS - > BCAT1.bam
+
+samtools view -h 03LD_ChIP-ES-betacatenin-lowdensity_r2.bam | \
+sed -e '/^@SQ/s/SN\:/SN\:chr/' -e '/^[^@]/s/\t/\tchr/2' | \
+samtools view -bS - > BCAT2.bam
+----------------------------------------------------------------------------------------
+
+./makeTagDirectory Beta-catenina-EpiSC-ChIP-Seq2/ BCAT1.bam BCAT2.bam  -format sam
+
+Will parse file: BCAT1.bam
+	Will parse file: BCAT2.bam
+
+	Creating directory: Beta-catenina-EpiSC-ChIP-Seq2/ and removing existing *.tags.tsv
+
+	Treating BCAT1.bam as a bam file
+	Reading alignment file BCAT1.bam
+
+-----------------------------------------------------------------------------------------------------------------------
+perl annotatePeaks.pl regionsE6ZIC2.bed mm10 -d inputZic2-E8-ChIP-Seq/ Zic2-E8-ChIP-Seq/ inputBeta-catenina-EpiSC-ChIP-Seq2/ Beta-catenina-EpiSC-ChIP-Seq2/ inputZic2-E6-ChIP-Seq/ Zic2-E6-ChIP-Seq/ -size 2000 -m Zic2_known9.motif Nrf1_known1.motif Zic1.2_known8.motif Lef1_known1.motif Tcf3_known2.motif Oct4_Nanog_known3.motif -mbed motifE6.bed -p regionsBCAT.bed regionsE8ZIC2.bed -pdist -pcount > E6contraste2022.bed
+
+	Peak file = regionsE6ZIC2.bed
+	Genome = mm10
+	Organism = mouse
+	Tag Directories:
+		inputZic2-E8-ChIP-Seq/
+		Zic2-E8-ChIP-Seq/
+		inputBeta-catenina-EpiSC-ChIP-Seq2/
+		Beta-catenina-EpiSC-ChIP-Seq2/
+		inputZic2-E6-ChIP-Seq/
+		Zic2-E6-ChIP-Seq/
+	Peak Region set to 2000
+	Motif files:
+		Zic2_known9.motif	-m
+		Nrf1_known1.motif	-m
+		Zic1.2_known8.motif	-m
+		Lef1_known1.motif	-m
+		Tcf3_known2.motif	-m
+		Oct4_Nanog_known3.motif	-m
+	Will produce a motif bed file: motifE6.bed
+	Peak Files:
+		regionsBCAT.bed
+		regionsE8ZIC2.bed
+	Will only report absolute distance for nearest peaks
+	Will report number of peaks
+	Peak/BED file conversion summary:
+		BED/Header formatted lines: 7289
+		peakfile formatted lines: 0
+		Duplicated Peak IDs: 0
+
+	Peak File Statistics:
+		Total Peaks: 7289
+		Redundant Peak IDs: 0
+		Peaks lacking information: 0 (need at least 5 columns per peak)
+		Peaks with misformatted coordinates: 0 (should be integer)
+		Peaks with misformatted strand: 0 (should be either +/- or 0/1)
+
+	Peak file looks good!
+
+perl annotatePeaks.pl regionsE8ZIC2.bed mm10 -d inputZic2-E8-ChIP-Seq/ Zic2-E8-ChIP-Seq/ inputBeta-catenina-EpiSC-ChIP-Seq2/ Beta-catenina-EpiSC-ChIP-Seq2/ inputZic2-E6-ChIP-Seq/ Zic2-E6-ChIP-Seq/ -size 2000 -m Zic2_known9.motif Nrf1_known1.motif Zic1.2_known8.motif Lef1_known1.motif Tcf3_known2.motif Oct4_Nanog_known3.motif -mbed motifE8.bed -p regionsBCAT.bed regionsE6ZIC2.bed -pdist -pcount > E8contraste2022.bed
+
+perl annotatePeaks.pl regionsBCAT.bed mm10 -d inputZic2-E8-ChIP-Seq/ Zic2-E8-ChIP-Seq/ inputBeta-catenina-EpiSC-ChIP-Seq/ Beta-catenina-EpiSC-ChIP-Seq2/ inputZic2-E6-ChIP-Seq/ Zic2-E6-ChIP-Seq/ -size 2000 -m Zic2_known9.motif Nrf1_known1.motif Zic1.2_known8.motif Lef1_known1.motif Tcf3_known2.motif Oct4_Nanog_known3.motif -mbed motifBCAT.bed -p regionsE6ZIC2.bed regionsE8ZIC2.bed -pdist -pcount > BCATcontraste2022.bed
+
+-----------------------------------------------------------------------------------------------------------------------
+perl annotatePeaks.pl regionsE6ZIC2.bed mm10 -size 4000 -hist 10 -d inputZic2-E8-ChIP-Seq/ Zic2-E8-ChIP-Seq/ inputBeta-catenina-EpiSC-ChIP-Seq2/ Beta-catenina-EpiSC-ChIP-Seq2/ inputZic2-E6-ChIP-Seq/ Zic2-E6-ChIP-Seq/ > outputHIST_Zic2E6.txt
+Peak file = regionsE6ZIC2.bed
+	Genome = mm10
+	Organism = mouse
+	Peak Region set to 4000
+	-----------------------------------------------------
+	Histogram mode activated (bin size = 10 bp)
+	-----------------------------------------------------
+	Tag Directories:
+		inputZic2-E8-ChIP-Seq/
+		Zic2-E8-ChIP-Seq/
+		inputBeta-catenina-EpiSC-ChIP-Seq2/
+		Beta-catenina-EpiSC-ChIP-Seq2/
+		inputZic2-E6-ChIP-Seq/
+		Zic2-E6-ChIP-Seq/
+	Peak/BED file conversion summary:
+		BED/Header formatted lines: 7289
+		peakfile formatted lines: 0
+		Duplicated Peak IDs: 0
+
+	Peak File Statistics:
+		Total Peaks: 7289
+		Redundant Peak IDs: 0
+		Peaks lacking information: 0 (need at least 5 columns per peak)
+		Peaks with misformatted coordinates: 0 (should be integer)
+		Peaks with misformatted strand: 0 (should be either +/- or 0/1)
+
+	Peak file looks good!
+
+	Resizing peaks...
+	Reading Positions...
+-----------------------
+	Compiling per bp Histograms...
+	Finding Tags in Peaks from each directory...
+	Ratio for inputZic2-E8-ChIP-Seq/ : 0.0719791574848254
+	Ratio for Zic2-E8-ChIP-Seq/ : 0.0855371414713923
+	Ratio for inputBeta-catenina-EpiSC-ChIP-Seq2/ : 0.238105510647269
+	Ratio for Beta-catenina-EpiSC-ChIP-Seq2/ : 0.126867872515347
+	Ratio for inputZic2-E6-ChIP-Seq/ : 0.104488181153751
+	Ratio for Zic2-E6-ChIP-Seq/ : 0.114400092151562
+...
+
+
+
+perl annotatePeaks.pl regionsE8ZIC2.bed mm10 -size 4000 -hist 10 -d inputZic2-E8-ChIP-Seq/ Zic2-E8-ChIP-Seq/ inputBeta-catenina-EpiSC-ChIP-Seq2/ Beta-catenina-EpiSC-ChIP-Seq2/ inputZic2-E6-ChIP-Seq/ Zic2-E6-ChIP-Seq/ > outputHIST_Zic2E8.txt
+
+
+perl annotatePeaks.pl regionsBCAT.bed mm10 -size 4000 -hist 10 -d inputZic2-E8-ChIP-Seq/ Zic2-E8-ChIP-Seq/ inputBeta-catenina-EpiSC-ChIP-Seq2/ Beta-catenina-EpiSC-ChIP-Seq2/ inputZic2-E6-ChIP-Seq/ Zic2-E6-ChIP-Seq/ > outputHIST_BCAT.txt
+
+-----------------------------------------------------------------------------------------------------------------------
+Deeptools
+
+
+# run compute matrix to collect the data needed for plotting
+ 
+computeMatrix scale-regions -S 03ChIPbetacat_input.bw \
+                                 03ChIPbetacatLD.bw  \
+                                 inputE6ChIP.bw \
+                                 chipZic2E6.bw \
+                                 inputE8ChIP.bw \
+                                 chipZic2E8.bw \
+                                 ChIP_Zic2_ESC0h_sort.bw \
+                                 ChIPZic2_ESC32.bw \
+                              -R E6chr.bed E8chr.bed BCATchr.bed \
+                              --beforeRegionStartLength 5000 \
+                              --regionBodyLength 5000 \
+                              --afterRegionStartLength 2000 \
+                              --skipZeros -o matrix.mat.gz
+                              
+
+                              
+ plotProfile -m matrix.mat.gz \
+             -out ExampleProfile1.png \
+              --numPlotsPerRow 2 \
+              --plotTitle "Test data profile"
+              
+              First, let’s create a matrix for one of the E6 Zic2 replicates:
+              computeMatrix reference-point --referencePoint center -b 3000 -a 3000 -R E6chr.bed  -S 03ChIPbetacat_input.bw \
+                                 03ChIPbetacatLD.bw  \
+                                 inputE6ChIP.bw \
+                                 chipZic2E6.bw \
+                                 inputE8ChIP.bw \
+                                 chipZic2E8.bw \
+                                 --skipZeros -o matrixE6chr.gz -p 6 --outFileSortedRegions regions_TSS_E6.bed
+                                 
+                                              First, let’s create a matrix for one of the E6 Zic2 replicates:
+              computeMatrix reference-point --referencePoint center -b 3000 -a 3000 -R E6chr.bed  -S 03ChIPbetacat_input.bw \
+                                 03ChIPbetacatLD.bw  \
+                                 inputE6ChIP.bw \
+                                 chipZic2E6.bw \
+                                 inputE8ChIP.bw \
+                                 chipZic2E8.bw \
+                                 ChIP_Zic2_ESC0h_sort.bw \
+                                 ChIPZic2_ESC32.bw \
+                                 --skipZeros -o matrixE6chr1.gz  -p 6 --outFileSortedRegions regions_TSS_E6_p.bed
+                                 
+                                 
+              Now, let’s create another matrix for the E8 Zic2 replicates:
+
+                                 computeMatrix reference-point --referencePoint TSS -b 2000 -a 2000 -R  E6chr.bed E8chr.bed BCATchr.bed  -S inputE8ChIP.bw \
+                                 chipZic2E8.bw \
+                                 
+                                 --skipZeros -o matrixE8chr.gz -p 6 --outFileSortedRegions regions_TSS_E8.bed
+                                 
+              Now, let’s create another matrix for the BCAT replicates:
+
+                     computeMatrix  reference-point --referencePoint center -b 3000 -a 3000 -R E6chr.bed  -S 03ChIPbetacat_input.bw \
+                                 03ChIPbetacatLD.bw  \
+                                 inputE6ChIP.bw \
+                                 chipZic2E6.bw \
+                                 inputE8ChIP.bw \
+                                 chipZic2E8.bw \
+                                 ChIP_Zic2_ESC0h_sort.bw \
+                                 ChIPZic2_ESC32.bw \
+                                 --skipZeros -o matrixBCATchr1.gz  -p 6 --outFileSortedRegions regions_BCAT_p.bed
+                                 
+                                 Now, let’s create another matrix for the MAYER replicates:
+                                 
+                                 computeMatrix reference-point --referencePoint TSS -b 2000 -a 2000 -R  E6chr.bed E8chr.bed BCATchr.bed -S ChIP_Zic2_ESC0h_sort.bw \
+                                 ChIPZic2_ESC32.bw \
+                                 
+                                 --skipZeros -o matrixBCATchr.gz -p 6 --outFileSortedRegions regions_TSS_BCAT.bed
+                                 
+                                 
+                                 computeMatrix  reference-point --referencePoint center -b 3000 -a 3000 -R overlapPeaks.bed  -S 03ChIPbetacat_input.bw \
+                                 03ChIPbetacatLD.bw  \
+                                 inputE6ChIP.bw \
+                                 chipZic2E6.bw \
+                                 inputE8ChIP.bw \
+                                 chipZic2E8.bw \
+                                 ChIP_Zic2_ESC0h_sort.bw \
+                                 ChIPZic2_ESC32.bw \
+                                 H3_epi_E6_sorted_rmdup_bq10.bw \
+                                 H3K4me3_epi_e65_bs10.bw \
+                                 H3K4me3_PS_E75_bq10.bw \
+                                 H3K27ac_merge_eip65.bw \
+                                 k27ac_PS75_bq10.bw \
+                                 K27me3_PS75_sorted_rmdup.bw \
+                                 --skipZeros -o matrixOVERLAP.gz  -p 6 --outFileSortedRegions regions_overlap_p.bed
+     
+     
+     
+     plotHeatmap -m matrixOVERLAP.gz \
+-out OVERLAP_heatmap.pdf \
+--colorMap Greys \
+--whatToShow 'heatmap and colorbar' \
+--zMin 0 --zMax 15
+
+   plotHeatmap -m matrixOVERLAP.gz \
+-out OVERLAP_heatmap.pdf \
+--colorMap Greys \
+--whatToShow 'heatmap and colorbar' \
+--zMin 0 --zMax 20
+
+       plotProfile -m matrixOVERLAP.gz \
+-out matrixOVERLAP_profile1.png \
+--numPlotsPerRow 2  --colors black red black red black red black red                  
+
+plotProfile -m matrixE6chr1.gz \
+-out TSS_E6_profile2.png \
+--perGroup \
+-numPlotsPerRow 2
+
+plotProfile -m matrixE6chr1.gz \
+-out TSS_E6_profile3.png \
+-numPlotsPerRow 2
+
+
+plotHeatmap -m matrixE6chr1.gz \
+-out E6_profile1_heatmap.png \
+--colorMap Greys \
+--whatToShow 'heatmap and colorbar' \
+--zMin 0 --zMax 10
+
+
+
+
+plotProfile -m matrixBCATchr.gz \
+-out TSS_bcat_profile.png \
+--perGroup \
+--colors green purple \
+--plotTitle "" --samplesLabel "input" "ChIP BCAT" 
+
+-------------------------
+
+
+plotProfile -m matrixBCATchr1.gz \
+-out BcAT__profile2.png \
+--perGroup \
+-numPlotsPerRow 2
+
+plotProfile -m matrixBCATchr1.gz \
+-out BcAT__profile3.png \
+-numPlotsPerRow 2
+
+
+plotHeatmap -m matrixBCATchr1.gz \
+-out BcAT_profile1_heatmap.png \
+--colorMap Greys \
+--whatToShow 'heatmap and colorbar' \
+--zMin 0 --zMax 10
+
+
+--------------------------------------------------------
+
+computeMatrix  reference-point --referencePoint center -b 3000 -a 3000 -R zic2_nonoverlapPeaks.bed  -S 03ChIPbetacat_input.bw \
+                                 03ChIPbetacatLD.bw  \
+                                 inputE6ChIP.bw \
+                                 chipZic2E6.bw \
+                                 inputE8ChIP.bw \
+                                 chipZic2E8.bw \
+                                 ChIP_Zic2_ESC0h_sort.bw \
+                                 ChIPZic2_ESC32.bw \
+                                 H3_epi_E6_sorted_rmdup_bq10.bw \
+                                 H3K4me3_epi_e65_bs10.bw \
+                                 H3K4me3_PS_E75_bq10.bw \
+                                 H3K27ac_merge_eip65.bw \
+                                 k27ac_PS75_bq10.bw \
+                                 K27me3_PS75_sorted_rmdup.bw \
+                                 --skipZeros -o zic2_nonoverlapPeaks.gz  -p 6 --outFileSortedRegions zic2_nonoverlapPeaks_regions.bed
+                                 
+                                 zic2_nonoverlapPeaks.gz
+                                 
+                                 plotHeatmap -m zic2_nonoverlapPeaks.gz \
+-out zic2_nonoverlapPeaks_heatmap.png \
+--colorMap Greys \
+--whatToShow 'heatmap and colorbar' \
+--zMin 0 --zMax 20
+
+
+-out zic2_nonoverlapPeaks_heatmap.png \
+--colorMap Greys \
+--whatToShow 'heatmap and colorbar' \
+--zMin 0 --zMax 15
+
+
+
+ plotProfile -m zic2_nonoverlapPeaks.gz \
+-out zic2_nonoverlapPeaks_profile1.png \
+--numPlotsPerRow 2  --colors black red black red black red black red 
+
+--------------------------------------------------------
+
+computeMatrix  reference-point --referencePoint center -b 3000 -a 3000 -R BCAT_nonoverlapPeaks.bed  -S 03ChIPbetacat_input.bw \
+                                 03ChIPbetacatLD.bw  \
+                                 inputE6ChIP.bw \
+                                 chipZic2E6.bw \
+                                 inputE8ChIP.bw \
+                                 chipZic2E8.bw \
+                                 ChIP_Zic2_ESC0h_sort.bw \
+                                 ChIPZic2_ESC32.bw \
+                                 H3_epi_E6_sorted_rmdup_bq10.bw \
+                                 H3K4me3_epi_e65_bs10.bw \
+                                 H3K4me3_PS_E75_bq10.bw \
+                                 H3K27ac_merge_eip65.bw \
+                                 k27ac_PS75_bq10.bw \
+                                 K27me3_PS75_sorted_rmdup.bw \
+                                 --skipZeros -o BCAT_nonoverlapPeaks.gz  -p 6 --outFileSortedRegions BCAT_nonoverlapPeaks_regions.bed
+                                 
+                                 
+                                 
+                                 plotHeatmap -m BCAT_nonoverlapPeaks.gz \
+-out BCAT_nonoverlapPeaks_heatmap.png \
+--colorMap Greys \
+--whatToShow 'heatmap and colorbar' \
+--zMin 0 --zMax 20
+
+
+ plotProfile -m BCAT_nonoverlapPeaks.gz \
+-out BCAT_nonoverlapPeaks_profile1.png \
+--numPlotsPerRow 2  --colors black red black red black red black red 
