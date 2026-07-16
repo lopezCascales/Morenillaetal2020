@@ -1,0 +1,207 @@
+################################################################################
+## Heatmap RNAseq & ChIPseq (estilo figura D: dendrograma + heatmap Log2FC +
+## barra de anotacion "only RNAseq DEG" vs "common RNAseq+ChIPseq")
+##
+## Adaptado del script original (heatmap.2 / ComplexHeatmap para ATAC-seq)
+## a la estructura de tu tabla "table_heatmapactin.xlsx", que esta TRANSPUESTA
+## respecto al script antiguo:
+##
+##   - En tu excel los GENES estan en COLUMNAS y las VARIABLES en FILAS.
+##   - Bloque 1 (arriba): fila "Gene" con los simbolos de gen como cabecera,
+##     y debajo filas categoricas: OE_Zic2, ChIP_Zic2, y varios terminos GO
+##     (valores "Up"/"NO" o "YES"/"NO") -> esto es lo que usaremos para
+##     construir la columna de PATHWAY y la clasificacion DEG.
+##   - Bloque 2 (abajo, resaltado en rosa): fila "Gene.name" con los mismos
+##     simbolos de gen como cabecera, y debajo filas numericas: rldGFP1_36,
+##     rldGFP2_36, rldGFP3_36, rldzic2_1, rldzic2_2, rldzic2_3, pvalue,
+##     log2FoldChange -> esto es la matriz de expresion (rld) que se centra
+##     por gen para obtener el Log2FC relativo, igual que hacia el script
+##     viejo con "LFC_rld <- rld_matrix - rld_mean".
+##
+## Si tu excel real difiere un poco (nombres de fila distintos, mas/menos
+## columnas de pathway, etc.) solo tienes que tocar la seccion 1 y 3 marcadas
+## mas abajo.
+
+## creador> Maria Teresa Lopez Cascales
+################################################################################
+
+## ---- 0. Paquetes ----
+# install.packages(c("readxl","dendextend"))  # si hace falta
+# if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+# BiocManager::install(c("ComplexHeatmap","circlize"))
+
+library(readxl)
+library(ComplexHeatmap)
+library(circlize)
+library(dendextend)
+
+## ---- 1. Directorio y lectura de la tabla ----
+directory <- "~/LABMEMBERS/MAYTE"     # <-- cambia esto
+setwd(directory)
+
+# Leemos toda la hoja como texto/valores sin forzar tipos, porque mezcla
+# texto ("Up","NO","YES") con numeros (rld, pvalue, log2FC).
+raw <- read_excel("table_heatmapactin.xlsx", col_names = FALSE)
+raw <- as.data.frame(raw, stringsAsFactors = FALSE)
+
+# Estructura actual de tu tabla (con la columna "cols" que has anadido):
+#   Columna 1 ("cols")  -> categoria de la fila: RNAseq, Chipseq, Pathways,
+#                          columns, expressionGFP..., expressionZic..., pvalue,
+#                          log2FoldChange
+#   Columna 2 ("Gene")  -> etiqueta/nombre de la variable de esa fila
+#                          (p.ej. "GO:0034330:GOBP:Cell_junction_organization",
+#                          "rldGFP1_36", "rldzic2_1", etc.)
+#   Columnas 3:N        -> una columna por gen (Fgf5, Nrp2, Fhdc1, ...), con
+#                          los valores de esa fila para cada gen.
+#
+# La fila "RNAseq" (OE_Zic2) es simplemente el criterio con el que se
+# selecciono la lista de genes (todos son DEG de RNAseq), NO es un pathway ni
+# debe ir como anotacion en el heatmap -> la ignoramos por completo.
+
+category <- trimws(as.character(raw[[1]]))
+varlabel <- trimws(as.character(raw[[2]]))
+
+idx_header <- which(tolower(varlabel) == "gene")[1]        # fila con los simbolos de gen (cabecera 1)
+stopifnot(!is.na(idx_header))
+genes <- trimws(as.character(unlist(raw[idx_header, -c(1, 2)])))
+
+## ---- 2. Anotaciones categoricas (pathways + DEG comun/solo RNAseq) ----
+# --- Pathways ---
+idx_pathways <- which(category == "Pathways")
+pathway_names <- varlabel[idx_pathways]
+
+is_hit <- function(x) toupper(trimws(x)) %in% c("YES", "UP")
+
+pathway_matrix <- as.data.frame(
+  lapply(idx_pathways, function(i) is_hit(raw[i, -c(1, 2)]))
+)
+colnames(pathway_matrix) <- pathway_names
+rownames(pathway_matrix) <- genes
+
+pathway_cols <- pathway_names   # nombres de pathway, para usar mas abajo
+
+# Un gen puede pertenecer a varios pathways; para la anotacion simple del
+# heatmap nos quedamos con el "pathway principal" (el primero que sea TRUE).
+# Si prefieres mostrar varias columnas booleanas en paralelo, salta a la
+# seccion 4b (anotacion multi-columna) mas abajo.
+main_pathway <- apply(pathway_matrix, 1, function(x) {
+  hits <- pathway_cols[which(x)]
+  if (length(hits) == 0) return("none")
+  hits[1]
+})
+names(main_pathway) <- genes
+
+# --- Clasificacion "only RNAseq DEG" vs "common RNAseq+ChIPseq" ---
+# Se basa unicamente en la fila con categoria "Chipseq" (ChIP_Zic2): si hay
+# pico de ChIP (YES) -> comun; si no (NO) -> solo RNAseq. La fila "RNAseq"
+# (OE_Zic2) NO se usa aqui, tal como comentabas.
+idx_chip <- which(category == "Chipseq")[1]
+stopifnot(!is.na(idx_chip))
+deg_type <- ifelse(is_hit(raw[idx_chip, -c(1, 2)]),
+                   "common RNA-seq+ChIP-seq",
+                   "only RNAseq DEG")
+names(deg_type) <- genes
+
+## ---- 3. Matriz de expresion (rld) y Log2FC centrado por gen ----
+# Filas de expresion: cualquier categoria que empiece por "expression"
+idx_expr <- grep("^expression", category, ignore.case = TRUE)
+expr_labels <- varlabel[idx_expr]   # rldGFP1_36, rldGFP2_36, ..., rldzic2_3
+
+rld_block <- raw[idx_expr, -c(1, 2), drop = FALSE]
+rld_block[] <- lapply(rld_block, function(x) as.numeric(as.character(x)))
+rownames(rld_block) <- expr_labels
+
+rld_matrix <- t(as.matrix(rld_block))   # genes en filas, muestras en columnas
+rownames(rld_matrix) <- genes
+
+# (Opcional) Filtrar por significancia usando la fila de categoria "pvalue"
+idx_pval <- which(category == "pvalue")[1]
+if (!is.na(idx_pval)) {
+  pvals <- as.numeric(as.character(unlist(raw[idx_pval, -c(1, 2)])))
+  names(pvals) <- genes
+  # sig_genes <- names(pvals)[pvals < 0.05]
+  # rld_matrix <- rld_matrix[sig_genes, , drop = FALSE]
+}
+
+# Log2FC relativo: centramos cada gen respecto a la media de los CONTROLES
+# GFP (rldGFP1_36, rldGFP2_36, rldGFP3_36), no respecto a la media de todas
+# las columnas. Asi el heatmap muestra el cambio relativo al control, igual
+# que en la figura D (GFP1-3 quedan ~blancas/cerca de 0 y zic2 se desvia).
+gfp_cols <- grep("^rldGFP", colnames(rld_matrix), ignore.case = TRUE, value = TRUE)
+stopifnot(length(gfp_cols) > 0)   # si tus controles se llaman distinto, edita el patron de arriba
+
+rld_mean <- rowMeans(rld_matrix[, gfp_cols, drop = FALSE], na.rm = TRUE)
+LFC_rld  <- rld_matrix - rld_mean
+
+# Reordena/renombra columnas de muestra si lo necesitas, p.ej.:
+# colnames(LFC_rld) <- c("GFP1","GFP2","GFP3","zic2_1","zic2_2","zic2_3")
+
+LFCrldmatrix <- as.matrix(LFC_rld)
+cat("Rango Log2FC:", min(LFCrldmatrix, na.rm = TRUE), "-",
+    max(LFCrldmatrix, na.rm = TRUE), "\n")
+
+## ---- 4. Colores ----
+cols <- colorRamp2(c(-1, 0, 1), c("blue", "white", "red"))
+
+## ---- 4a. Anotacion simple: DEG type + Pathway principal (una columna cada uno) ----
+ha_row <- rowAnnotation(
+  DEG_type = deg_type[rownames(LFCrldmatrix)],
+  Pathway  = main_pathway[rownames(LFCrldmatrix)],
+  col = list(
+    DEG_type = c("only RNAseq DEG" = "yellow",
+                 "common RNA-seq+ChIP-seq" = "darkgreen"),
+    Pathway  = setNames(
+      c("grey80", rainbow(length(pathway_cols), s = 0.55, v = 0.85)),
+      c("none", pathway_cols)
+    )
+  ),
+  annotation_name_side = "top",
+  simple_anno_size = unit(0.35, "cm")
+)
+
+## ---- 4b. (Alternativa) Anotacion multi-columna: un booleano por pathway ----
+# Descomenta este bloque si prefieres una franja por cada pathway en vez de
+# una unica columna "Pathway principal".
+#
+# pw_ha <- rowAnnotation(
+#   df  = pathway_matrix[rownames(LFCrldmatrix), , drop = FALSE],
+#   col = setNames(
+#     lapply(pathway_cols, function(p) c("TRUE" = "forestgreen", "FALSE" = "white")),
+#     pathway_cols
+#   ),
+#   simple_anno_size = unit(0.3, "cm")
+# )
+
+## ---- 5. Heatmap ----
+gene_labels <- rownames(LFCrldmatrix)   # o usa una columna "symbol" si la tienes
+
+hm <- Heatmap(
+  LFCrldmatrix,
+  name = "Log2FC",
+  col = cols,
+  cluster_rows = TRUE,
+  cluster_columns = TRUE,
+  show_row_names = TRUE,
+  row_names_gp = gpar(fontsize = 6),
+  row_labels = gene_labels,
+  right_annotation = ha_row,
+  column_title = "RNAseq & ChIPseq",
+  heatmap_legend_param = list(at = c(-1, 0, 1))
+)
+
+pdf("heatmap_RNAseq_ChIPseq.pdf", width = 8, height = 10)
+draw(hm)
+dev.off()
+
+draw(hm)   # muestra tambien en pantalla / RStudio
+
+## ---- 6. (Opcional) Extraer el dendrograma de filas, como en el script viejo ----
+row_dend <- row_dend(hm)
+hc <- as.hclust(row_dend)
+# hc$labels[hc$order]
+
+pdf("dendro_RNAseq_ChIPseq.pdf")
+plot(hc, labels = FALSE, hang = -1)
+dev.off()
+
+#########################################################################################
